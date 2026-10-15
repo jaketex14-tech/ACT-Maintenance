@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Service Hub</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --surface: #1E1E1E;
+      --surface-hover: #2A2A2A;
+      --border: #333333;
+      --primary: #4DA3FF;
+      --green: #2EA043;
+      --yellow: #E3B341;
+      --red: #FF5555;
+      --text: #F0F0F0;
+      --muted: #9E9E9E;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      min-height: 48px;
+    }
+
+    h1 {
+      flex: 1;
+      font-size: 1.55rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon-only-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: transform 0.1s, opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .icon-only-btn:active {
+      transform: scale(0.88);
+      opacity: 0.7;
+    }
+
+    .icon-only-btn svg {
+      width: 36px;
+      height: 36px;
+      stroke: var(--text);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    #prompt-banner {
+      background: var(--surface);
+      border-left: 6px solid var(--primary);
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .view {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow-y: auto;
+      gap: 14px;
+    }
+
+    .view.active {
+      display: flex;
+    }
+
+    .home-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+      justify-content: center;
+      padding-bottom: 30px;
+    }
+
+    .huge-card {
+      background: var(--surface);
+      border: 3px solid var(--border);
+      border-radius: 22px;
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+    }
+
+    .huge-card:active {
+      transform: scale(0.98);
+      background: var(--surface-hover);
+    }
+
+    .huge-card.service { border-color: var(--green); }
+    .huge-card.history { border-color: var(--primary); }
+
+    .huge-icon { font-size: 3.2rem; }
+    .huge-title { font-size: 1.7rem; font-weight: 800; }
+    .huge-sub { font-size: 1.05rem; color: var(--muted); }
+
+    .item-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      padding: 22px 18px;
+      border-radius: 16px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .item-card:active {
+      background: var(--surface-hover);
+      transform: scale(0.99);
+    }
+
+    .item-card.folder { border-left: 8px solid var(--yellow); }
+    .item-card.doc { border-left: 8px solid var(--primary); }
+    .item-card.sheet { border-left: 8px solid var(--green); }
+
+    /* Wizard Card Styling */
+    .wizard-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      flex: 1;
+    }
+
+    .step-badge {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .question-title {
+      font-size: 1.65rem;
+      font-weight: 800;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    .question-hint {
+      font-size: 1.05rem;
+      color: var(--muted);
+      margin-top: -8px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      font-size: 1.35rem;
+      color-scheme: dark;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    textarea {
+      flex: 1;
+      line-height: 1.5;
+      resize: none;
+      min-height: 150px;
+    }
+
+    /* Photo Upload UI */
+    .photo-upload-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex: 1;
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      background: var(--bg);
+      text-align: center;
+    }
+
+    .photo-upload-box input[type="file"] {
+      display: none;
+    }
+
+    .upload-btn-label {
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      color: var(--text);
+      padding: 16px 24px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 14px;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .upload-btn-label:active {
+      transform: scale(0.97);
+    }
+
+    #preview-container {
+      position: relative;
+      max-height: 180px;
+      display: none;
+    }
+
+    #preview-img {
+      max-height: 160px;
+      border-radius: 10px;
+      border: 2px solid var(--green);
+    }
+
+    .big-btn {
+      padding: 22px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--green);
+      margin-top: 8px;
+    }
+
+    .big-btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-blue {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .success-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 16px;
+      background: var(--surface);
+      border: 2px solid var(--green);
+      border-radius: 20px;
+      padding: 30px;
+    }
+
+    .success-icon { font-size: 4rem; }
+    .success-title { font-size: 2.2rem; font-weight: 800; color: var(--green); }
+    .success-sub { font-size: 1.2rem; color: var(--muted); }
+
+    .history-box {
+      flex: 1;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+
+    .table-wrap {
+      flex: 1;
+      overflow: auto;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 1.15rem; }
+    th, td { border: 1px solid var(--border); padding: 14px 12px; text-align: left; min-width: 110px; }
+    th { background: #282c34; font-weight: 800; position: sticky; top: 0; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <button class="icon-only-btn" id="back-btn" onclick="goBack()" style="display:none;" aria-label="Back">
+      <svg viewBox="0 0 24 24">
+        <path d="M19 12H5"></path>
+        <path d="M12 19l-7-7 7-7"></path>
+      </svg>
+    </button>
+
+    <h1 id="title">Service Hub</h1>
+
+    <button class="icon-only-btn" id="home-btn" onclick="goHome()" style="display:none;" aria-label="Home">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 10l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+    </button>
+  </header>
+
+  <div id="prompt-banner"></div>
+
+  <!-- 1. HOME VIEW -->
+  <div id="home-view" class="view active">
+    <div class="home-grid">
+      <button class="huge-card service" onclick="startFlow('service')">
+        <span class="huge-icon">🔧</span>
+        <span class="huge-title">New Service / Repair</span>
+        <span class="huge-sub">Log a new entry into a Sheet or Doc</span>
+      </button>
+
+      <button class="huge-card history" onclick="startFlow('history')">
+        <span class="huge-icon">📋</span>
+        <span class="huge-title">History</span>
+        <span class="huge-sub">Read past service records & notes</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. FOLDER / FILE LIST VIEW -->
+  <div id="list-view" class="view"></div>
+
+  <!-- 3. STEP-BY-STEP QUESTION WIZARD VIEW -->
+  <div id="service-view" class="view">
+    <select id="service-sheet-tabs" onchange="switchServiceTab()" style="display:none;"></select>
+    
+    <div id="wizard-form-container" style="display:flex; flex-direction:column; flex:1; gap:14px;">
+      <div class="wizard-card">
+        <div class="step-badge" id="q-step-badge">Question 1 of 6</div>
+        <div class="question-title" id="q-title">What date was the work performed?</div>
+        <div class="question-hint" id="q-hint" style="display:none;"></div>
+        <div id="q-input-container" style="display:flex; flex-direction:column; flex:1;"></div>
+      </div>
+
+      <button class="big-btn btn-blue" id="q-next-btn" onclick="nextQuestion()">Next ➡️</button>
+    </div>
+
+    <!-- Thank You Success Screen -->
+    <div id="success-screen" class="success-screen" style="display:none;">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Thank You!</div>
+      <div class="success-sub">Service entry saved successfully.<br>Returning home...</div>
+    </div>
+  </div>
+
+  <!-- 4. HISTORY VIEW -->
+  <div id="history-view" class="view">
+    <select id="history-sheet-tabs" onchange="switchHistoryTab()" style="display:none;"></select>
+    <div id="history-content" style="display:flex; flex-direction:column; flex:1; overflow:hidden;"></div>
+  </div>
+
+  <script>
+    const SERVICE_QUESTIONS = [
+      {
+        label: "Date",
+        prompt: "What date was the work performed?",
+        hint: "Defaults to today — tap the box if you need to change it for a late entry.",
+        type: "date"
+      },
+      {
+        label: "Hours / Mileage",
+        prompt: "What are the hours/mileage?",
+        placeholder: "e.g. 1,450 hrs or 112,400 mi",
+        type: "text"
+      },
+      {
+        label: "Performed By",
+        prompt: "Who worked on this?",
+        placeholder: "Enter name...",
+        type: "text"
+      },
+      {
+        label: "Reason for Work",
+        prompt: "What was the reason for the work performed?",
+        placeholder: "e.g. Scheduled maintenance, leaking hose, noise...",
+        type: "textarea"
+      },
+      {
+        label: "Work Done",
+        prompt: "What work was done?",
+        placeholder: "Describe the service or repairs completed...",
+        type: "textarea"
+      },
+      {
+        label: "Receipt / Invoice Photo",
+        prompt: "Capture or upload invoice/receipt photo",
+        hint: "Optional — tap below to take a photo with your camera or select from your gallery.",
+        type: "photo"
+      }
+    ];
+
+    let currentMode = null;
+    let navStack = [];
+    let currentFile = null;
+    let currentSheetName = '';
+    
+    let currentQuestionIndex = 0;
+    let wizardAnswers = ["", "", "", "", "", null]; // Index 5 holds photo object { base64, name }
+
+    function getTodayISO() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDisplayDate(isoStr) {
+      if (!isoStr || !isoStr.includes('-')) return isoStr || new Date().toLocaleDateString();
+      const parts = isoStr.split('-');
+      return `${Number(parts[1])}/${Number(parts[2])}/${parts[0]}`;
+    }
+
+    function callServer(params) {
+      return new Promise((resolve, reject) => {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(res => {
+              if (!res) reject(new Error("Empty response from Code.gs"));
+              else resolve(res);
+            })
+            .withFailureHandler(err => reject(err))
+            .handleRequest(params);
+        } else {
+          reject(new Error("Not connected to Google Apps Script. Open via your Web App URL."));
+        }
+      });
+    }
+
+    function setBanner(text, color = 'var(--primary)') {
+      const b = document.getElementById('prompt-banner');
+      if (!text) {
+        b.style.display = 'none';
+      } else {
+        b.style.display = 'block';
+        b.style.borderLeftColor = color;
+        b.textContent = text;
+      }
+    }
+
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+      const isHome = viewId === 'home-view';
+      document.getElementById('back-btn').style.display = isHome ? 'none' : 'flex';
+      document.getElementById('home-btn').style.display = isHome ? 'none' : 'flex';
+    }
+
+    function goHome() {
+      currentMode = null;
+      navStack = [];
+      currentFile = null;
+      currentQuestionIndex = 0;
+      wizardAnswers = [getTodayISO(), "", "", "", "", null];
+      document.getElementById('title').textContent = 'Service Hub';
+      setBanner('');
+      showView('home-view');
+    }
+
+    function goBack() {
+      const inServiceView = document.getElementById('service-view').classList.contains('active');
+      const isWizardActive = document.getElementById('wizard-form-container').style.display !== 'none';
+
+      if (inServiceView && isWizardActive && currentQuestionIndex > 0) {
+        saveCurrentInputToMemory();
+        currentQuestionIndex--;
+        renderQuestionPage();
+        return;
+      }
+
+      if (navStack.length <= 1) return goHome();
+      navStack.pop();
+      const prev = navStack[navStack.length - 1];
+      if (prev.step === 'folder') {
+        loadFolderStep(prev.folderId, false);
+      }
+    }
+
+    function startFlow(mode) {
+      currentMode = mode;
+      navStack = [];
+      loadFolderStep(null, true);
+    }
+
+    async function loadFolderStep(folderId = null, pushStack = true) {
+      showView('list-view');
+      const container = document.getElementById('list-view');
+      container.innerHTML = '';
+
+      const modeColor = currentMode === 'service' ? 'var(--green)' : 'var(--primary)';
+      document.getElementById('title').textContent = currentMode === 'service' ? '🔧 New Service' : '📋 History';
+      setBanner('⏳ Loading from Google Drive...', modeColor);
+
+      try {
+        const data = await callServer({ action: 'list', folderId: folderId });
+        if (data.status !== 'success') throw new Error(data.message);
+
+        if (pushStack) {
+          navStack.push({ step: 'folder', folderId: data.folderId, name: data.folderName });
+        }
+
+        const hasFolders = data.folders && data.folders.length > 0;
+        const hasFiles = data.files && data.files.length > 0;
+
+        if (hasFolders && !hasFiles) {
+          setBanner('Step 1: Select a Subfolder', modeColor);
+        } else if (!hasFolders && hasFiles) {
+          setBanner(`Step 2: Select a File in "${data.folderName}"`, modeColor);
+        } else if (hasFolders && hasFiles) {
+          setBanner('Select a Subfolder or File', modeColor);
+        } else {
+          setBanner('This folder has no subfolders, Google Docs, or Google Sheets.', 'var(--yellow)');
+        }
+
+        data.folders.forEach(f => {
+          const btn = document.createElement('button');
+          btn.className = 'item-card folder';
+          btn.innerHTML = `<span>📁</span> <span>${f.name}</span>`;
+          btn.onclick = () => loadFolderStep(f.id, true);
+          container.appendChild(btn);
+        });
+
+        data.files.forEach(file => {
+          const btn = document.createElement('button');
+          const icon = file.type === 'doc' ? '📄' : '📊';
+          btn.className = `item-card ${file.type}`;
+          btn.innerHTML = `<span>${icon}</span> <span>${file.name}</span>`;
+          btn.onclick = () => selectFile(file);
+          container.appendChild(btn);
+        });
+
+      } catch (e) {
+        setBanner('❌ ' + e.message, 'var(--red)');
+      }
+    }
+
+    function selectFile(file) {
+      currentFile = file;
+      navStack.push({ step: 'file', file: file });
+      if (currentMode === 'service') openServiceEntry(file);
+      else openHistoryView(file);
+    }
+
+    // ==========================================
+    // STEP-BY-STEP QUESTION WIZARD (6 STEPS)
+    // ==========================================
+    async function openServiceEntry(file, sheetTab = '') {
+      showView('service-view');
+      const tabSelect = document.getElementById('service-sheet-tabs');
+      document.getElementById('title').textContent = file.name;
+      setBanner('');
+
+      document.getElementById('wizard-form-container').style.display = 'flex';
+      document.getElementById('success-screen').style.display = 'none';
+
+      currentQuestionIndex = 0;
+      wizardAnswers = [getTodayISO(), "", "", "", "", null];
+      renderQuestionPage();
+
+      if (file.type === 'doc') {
+        tabSelect.style.display = 'none';
+      } else {
+        try {
+          const data = await callServer({ action: 'readSheet', fileId: file.id, sheetName: sheetTab });
+          if (data.status !== 'success') throw new Error(data.message);
+          currentSheetName = data.currentSheet;
+
+          if (data.sheets.length > 1) {
+            tabSelect.style.display = 'block';
+            tabSelect.innerHTML = '';
+            data.sheets.forEach(t => {
+              const opt = document.createElement('option');
+              opt.value = t;
+              opt.textContent = 'Sheet Tab: ' + t;
+              if (t === data.currentSheet) opt.selected = true;
+              tabSelect.appendChild(opt);
+            });
+          } else {
+            tabSelect.style.display = 'none';
+          }
+        } catch (e) {
+          setBanner('❌ ' + e.message, 'var(--red)');
+        }
+      }
+    }
+
+    function switchServiceTab() {
+      currentSheetName = document.getElementById('service-sheet-tabs').value;
+    }
+
+    function renderQuestionPage() {
+      const q = SERVICE_QUESTIONS[currentQuestionIndex];
+      const total = SERVICE_QUESTIONS.length;
+
+      document.getElementById('q-step-badge').textContent = `Question ${currentQuestionIndex + 1} of ${total}`;
+      document.getElementById('q-title').textContent = q.prompt;
+
+      const hintEl = document.getElementById('q-hint');
+      if (q.hint) {
+        hintEl.textContent = q.hint;
+        hintEl.style.display = 'block';
+      } else {
+        hintEl.style.display = 'none';
+      }
+
+      const container = document.getElementById('q-input-container');
+      const savedVal = wizardAnswers[currentQuestionIndex] || '';
+
+      if (q.type === 'textarea') {
+        container.innerHTML = `<textarea id="wizard-input" placeholder="${q.placeholder}">${savedVal}</textarea>`;
+      } else if (q.type === 'date') {
+        container.innerHTML = `<input type="date" id="wizard-input" value="${savedVal || getTodayISO()}">`;
+      } else if (q.type === 'photo') {
+        const hasPhoto = wizardAnswers[5] !== null;
+        container.innerHTML = `
+          <div class="photo-upload-box">
+            <label class="upload-btn-label" for="photo-file-input">
+              📷 Take Photo or Upload File
+            </label>
+            <input type="file" id="photo-file-input" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)">
+            <div id="preview-container" style="display:${hasPhoto ? 'block' : 'none'};">
+              <img id="preview-img" src="${hasPhoto ? wizardAnswers[5].base64 : ''}" alt="Receipt Preview">
+              <p style="font-size:0.95rem; color:var(--green); margin-top:6px;" id="photo-filename">${hasPhoto ? wizardAnswers[5].name : ''}</p>
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `<input type="text" id="wizard-input" value="${savedVal.replace(/"/g, '&quot;')}" placeholder="${q.placeholder}">`;
+      }
+
+      const nextBtn = document.getElementById('q-next-btn');
+      if (currentQuestionIndex === total - 1) {
+        nextBtn.textContent = '✅ Save Service Entry';
+        nextBtn.className = 'big-btn';
+      } else {
+        nextBtn.textContent = 'Next ➡️';
+        nextBtn.className = 'big-btn btn-blue';
+      }
+
+      setTimeout(() => {
+        const inp = document.getElementById('wizard-input');
+        if (inp && q.type !== 'date' && q.type !== 'photo') {
+          inp.focus();
+          if (q.type === 'text') {
+            inp.onkeydown = (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                nextQuestion();
+              }
+            };
+          }
+        }
+      }, 50);
+    }
+
+    function handlePhotoSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64String = e.target.result;
+        wizardAnswers[5] = { base64: base64String, name: file.name };
+        
+        const prevContainer = document.getElementById('preview-container');
+        const prevImg = document.getElementById('preview-img');
+        const nameEl = document.getElementById('photo-filename');
+        if (prevContainer && prevImg) {
+          prevImg.src = base64String;
+          nameEl.textContent = file.name;
+          prevContainer.style.display = 'block';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveCurrentInputToMemory() {
+      const q = SERVICE_QUESTIONS[currentQuestionIndex];
+      if (q.type === 'photo') return; // Handled directly in handlePhotoSelect
+
+      const inp = document.getElementById('wizard-input');
+      if (inp) {
+        wizardAnswers[currentQuestionIndex] = inp.value.trim();
+      }
+    }
+
+    function nextQuestion() {
+      saveCurrentInputToMemory();
+      setBanner('');
+
+      if (currentQuestionIndex < SERVICE_QUESTIONS.length - 1) {
+        currentQuestionIndex++;
+        renderQuestionPage();
+      } else {
+        submitService();
+      }
+    }
+
+    async function submitService() {
+      const btn = document.getElementById('q-next-btn');
+      const textAnswers = wizardAnswers.slice(1, 5);
+      if (textAnswers.every(a => a === '')) {
+        return setBanner('⚠️ Please answer at least one service question before saving!', 'var(--yellow)');
+      }
+
+      btn.disabled = true;
+      setBanner('⏳ Saving entry & uploading receipt...', 'var(--green)');
+      const entryDate = formatDisplayDate(wizardAnswers[0] || getTodayISO());
+      const photoObj = wizardAnswers[5];
+
+      try {
+        if (currentFile.type === 'doc') {
+          const receiptLink = photoObj ? photoObj.base64 : null; 
+          const formattedEntry = 
+            `\n----------------------------------------\n` +
+            `Date: ${entryDate}\n` +
+            `Hours/Mileage: ${wizardAnswers[1] || 'N/A'}\n` +
+            `Who Worked On This: ${wizardAnswers[2] || 'N/A'}\n` +
+            `Reason for Work: ${wizardAnswers[3] || 'N/A'}\n` +
+            `Work Done: ${wizardAnswers[4] || 'N/A'}`;
+
+          const res = await callServer({
+            action: 'writeDoc',
+            fileId: currentFile.id,
+            mode: 'append',
+            text: formattedEntry,
+            receiptUrl: photoObj ? photoObj.name : null
+          });
+          if (res.status !== 'success') throw new Error(res.message);
+
+        } else {
+          // Row values: [Date, Hours, Who, Reason, Work Done] (Column F / index 5 filled in backend)
+          const rowValues = [
+            entryDate,
+            wizardAnswers[1],
+            wizardAnswers[2],
+            wizardAnswers[3],
+            wizardAnswers[4]
+          ];
+
+          const payload = {
+            action: 'appendSheet',
+            fileId: currentFile.id,
+            sheetName: currentSheetName,
+            rowValues: rowValues
+          };
+
+          if (photoObj) {
+            payload.base64Data = photoObj.base64;
+            payload.fileName = photoObj.name;
+          }
+
+          const res = await callServer(payload);
+          if (res.status !== 'success') throw new Error(res.message);
+        }
+
+        // Reset wizard state
+        wizardAnswers = [getTodayISO(), "", "", "", "", null];
+        currentQuestionIndex = 0;
+        btn.disabled = false;
+
+        setBanner('');
+        document.getElementById('wizard-form-container').style.display = 'none';
+        document.getElementById('success-screen').style.display = 'flex';
+
+        setTimeout(() => {
+          goHome();
+        }, 3000);
+
+      } catch (e) {
+        setBanner('❌ Save failed: ' + e.message, 'var(--red)');
+        btn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // HISTORY VIEW
+    // ==========================================
+    async function openHistoryView(file, sheetTab = '') {
+      showView('history-view');
+      const container = document.getElementById('history-content');
+      const tabSelect = document.getElementById('history-sheet-tabs');
+      container.innerHTML = '';
+      document.getElementById('title').textContent = file.name;
+      setBanner('⏳ Loading history...', 'var(--primary)');
+
+      try {
+        if (file.type === 'doc') {
+          tabSelect.style.display = 'none';
+          const data = await callServer({ action: 'readDoc', fileId: file.id });
+          if (data.status !== 'success') throw new Error(data.message);
+
+          setBanner(`History: ${file.name}`, 'var(--primary)');
+          const box = document.createElement('div');
+          box.className = 'history-box';
+          box.textContent = data.content || 'This document is empty.';
+          container.appendChild(box);
+        } else {
+          const data = await callServer({ action: 'readSheet', fileId: file.id, sheetName: sheetTab });
+          if (data.status !== 'success') throw new Error(data.message);
+
+          currentSheetName = data.currentSheet;
+          if (data.sheets.length > 1) {
+            tabSelect.style.display = 'block';
+            tabSelect.innerHTML = '';
+            data.sheets.forEach(t => {
+              const opt = document.createElement('option');
+              opt.value = t;
+              opt.textContent = 'Sheet Tab: ' + t;
+              if (t === data.currentSheet) opt.selected = true;
+              tabSelect.appendChild(opt);
+            });
+          } else {
+            tabSelect.style.display = 'none';
+          }
+
+          setBanner(`History: ${file.name} (${data.rows.length} rows)`, 'var(--primary)');
+          const wrap = document.createElement('div');
+          wrap.className = 'table-wrap';
+          const table = document.createElement('table');
+
+          if (!data.rows || data.rows.length === 0) {
+            table.innerHTML = '<tr><td>No history recorded yet.</td></tr>';
+          } else {
+            data.rows.forEach((row, rIdx) => {
+              const tr = document.createElement('tr');
+              row.forEach((cellVal, cIdx) => {
+                const cell = document.createElement(rIdx === 0 ? 'th' : 'td');
+                // Make Column F (index 5) links clickable if they are URLs
+                if (rIdx > 0 && cIdx === 5 && cellVal && cellVal.startsWith('http')) {
+                  cell.innerHTML = `<a href="${cellVal}" target="_blank" style="color:var(--primary); text-decoration:underline;">🔗 View Receipt</a>`;
+                } else {
+                  cell.textContent = cellVal;
+                }
+                tr.appendChild(cell);
+              });
+              table.appendChild(tr);
+            });
+          }
+          wrap.appendChild(table);
+          container.appendChild(wrap);
+        }
+      } catch (e) {
+        setBanner('❌ ' + e.message, 'var(--red)');
+      }
+    }
+
+    function switchHistoryTab() {
+      openHistoryView(currentFile, document.getElementById('history-sheet-tabs').value);
+    }
+  </script>
+</body>
+</html>
