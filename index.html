@@ -464,20 +464,42 @@
       return `${Number(parts[1])}/${Number(parts[2])}/${parts[0]}`;
     }
 
-    function callServer(params) {
-      return new Promise((resolve, reject) => {
-        if (typeof google !== 'undefined' && google.script && google.script.run) {
-          google.script.run
-            .withSuccessHandler(res => {
-              if (!res) reject(new Error("Empty response from Code.gs"));
-              else resolve(res);
-            })
-            .withFailureHandler(err => reject(err))
-            .handleRequest(params);
-        } else {
-          reject(new Error("Not connected to Google Apps Script. Open via your Web App URL."));
+ // Automatically detects if running on Google or GitHub/Mobile Wrapper
+    function getApiUrl() {
+      // If hosted on GitHub or local, look for saved Web App URL in browser storage
+      const saved = localStorage.getItem('service_hub_url');
+      if (saved) return saved;
+      
+      // If running inside Google Apps Script, use the current window URL
+      if (window.location.hostname.includes('googleusercontent.com') || window.location.hostname.includes('script.google.com')) {
+        return window.location.href.split('?')[0];
+      }
+      return '';
+    }
+
+    // Universal bridge: talks to Google Apps Script via fetch()
+    async function callServer(params) {
+      const url = getApiUrl();
+      if (!url) {
+        const userUrl = prompt("Please paste your Google Apps Script Web App URL:");
+        if (userUrl) {
+          localStorage.setItem('service_hub_url', userUrl.trim());
+          return callServer(params);
         }
-      });
+        throw new Error("Missing Google Apps Script Web App URL.");
+      }
+
+      // Convert params object to query string for GET requests
+      const queryString = Object.keys(params)
+        .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(params[key]))
+        .join('&');
+
+      const fullUrl = `${url}?${queryString}`;
+
+      const res = await fetch(fullUrl);
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message || "Server error");
+      return data;
     }
 
     function setBanner(text, color = 'var(--primary)') {
